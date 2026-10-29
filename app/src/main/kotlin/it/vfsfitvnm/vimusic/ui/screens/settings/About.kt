@@ -83,7 +83,7 @@ fun About() {
                 .fillMaxSize()
         ) {
             BasicText(
-                text = "RiMusic v${BuildConfig.VERSION_NAME} by fast4x",
+                text = "RAmpMusic v${BuildConfig.VERSION_NAME} · basado en RiMusic de fast4x",
                 style = typography.s.secondary,
 
                 )

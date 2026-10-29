@@ -1,5 +1,7 @@
 package it.vfsfitvnm.vimusic.ui.screens.player
 
+import android.util.Log
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -97,8 +99,7 @@ fun Thumbnail(
     val videoidmismatcherror =
         stringResource(R.string.error_the_returned_video_id_doesn_t_match_the_requested_one)
     val unknownplaybackerror =
-        stringResource(R.string.error_an_unknown_playback_error_has_occurred) + " " +
-                stringResource(R.string.restart_app_please)
+        stringResource(R.string.error_an_unknown_playback_error_has_occurred)
 
     val formatUnsupported = "This file seems to have an unsupported format"
 
@@ -113,6 +114,11 @@ fun Thumbnail(
             }
 
             override fun onPlayerError(playbackException: PlaybackException) {
+                Log.e(
+                    "PlaybackError",
+                    "code=${playbackException.errorCodeName} message=${playbackException.message}",
+                    playbackException
+                )
                 error = playbackException
                 binder.stopRadio()
                 context.stopService(context.intent<PlayerService>())
@@ -220,6 +226,21 @@ fun Thumbnail(
                         is VideoIdMismatchException -> videoidmismatcherror
                         is PlayableFormatNonSupported -> formatUnsupported
                         else -> unknownplaybackerror
+                    }
+                },
+                detailProvider = {
+                    buildString {
+                        append(error?.errorCodeName ?: "ERROR")
+                        error?.cause?.javaClass?.simpleName?.let { append(" · ").append(it) }
+                        append("\ncliente=")
+                            .append(it.vfsfitvnm.innertube.Innertube.lastPlayerClient ?: "?")
+                            .append(" · pot=")
+                            .append(
+                                if (it.vfsfitvnm.innertube.Innertube.lastPlayerUsedPot) "sí" else "no"
+                            )
+                        it.vfsfitvnm.vimusic.utils.PoTokenProvider.lastError?.let {
+                            append("\nPO token: ").append(it)
+                        }
                     }
                 },
                 onDismiss = {

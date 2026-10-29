@@ -401,4 +401,10 @@
     <string name="do_you_really_want_to_delete_cache">Do you really want to delete cache?</string>
     <string name="lang_swedish">Swedish</string>
     <string name="pinned_playlists">Pinned Playlists</string>
+    <string name="playback_error_title">Error de reproducción</string>
+    <string name="retry">Reintentar</string>
+    <string name="copy_details">Copiar detalles</string>
+    <string name="close">Cerrar</string>
 </resources>
+
+

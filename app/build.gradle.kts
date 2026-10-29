@@ -12,8 +12,8 @@ android {
         applicationId = "it.fast4x.rimusic"
         minSdk = 21
         targetSdk = 34
-        versionCode = 20
-        versionName = "0.6.24"
+        versionCode = 25
+        versionName = "0.6.29"
         buildConfigField("String", "VERSION_NAME", "\"$versionName\"")
     }
 
@@ -29,13 +29,13 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            manifestPlaceholders["appName"] = "RiMusic-Debug"
+            manifestPlaceholders["appName"] = "RAmpMusic-Debug"
         }
 
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            manifestPlaceholders["appName"] = "RiMusic"
+            manifestPlaceholders["appName"] = "RAmpMusic"
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

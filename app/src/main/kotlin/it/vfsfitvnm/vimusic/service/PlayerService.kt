@@ -1292,14 +1292,15 @@ class PlayerService : InvincibleService(),
                     )
                 )
                 .connectTimeout(Duration.ofSeconds(16))
-                .readTimeout(Duration.ofSeconds(8))
+                .readTimeout(Duration.ofSeconds(30))
                 .build()
         }
         return OkHttpClient.Builder()
             .connectTimeout(Duration.ofSeconds(16))
-            .readTimeout(Duration.ofSeconds(8))
+            .readTimeout(Duration.ofSeconds(30))
             .build()
     }
+
 
 
     @UnstableApi
@@ -1330,7 +1331,7 @@ class PlayerService : InvincibleService(),
     @UnstableApi
     private fun createDataSourceFactory(): DataSource.Factory {
         val chunkLength = 512 * 1024L
-        val ringBuffer = RingBuffer<Pair<String, Uri>?>(2) { null }
+        val ringBuffer = RingBuffer<Triple<String, Uri, Map<String, String>>?>(2) { null }
 
         return ResolvingDataSource.Factory(createCacheDataSource()) { dataSpec ->
             val videoId = dataSpec.key ?: error("A key must be set")
@@ -1352,9 +1353,11 @@ class PlayerService : InvincibleService(),
 
                 videoId == ringBuffer.getOrNull(0)?.first ->
                     dataSpec.withUri(ringBuffer.getOrNull(0)!!.second)
+                        .withRequestHeaders(ringBuffer.getOrNull(0)!!.third)
 
                 videoId == ringBuffer.getOrNull(1)?.first ->
                     dataSpec.withUri(ringBuffer.getOrNull(1)!!.second)
+                        .withRequestHeaders(ringBuffer.getOrNull(1)!!.third)
 
                 else -> {
                     val body = runBlocking(Dispatchers.IO) {
@@ -1405,7 +1408,7 @@ class PlayerService : InvincibleService(),
                                 )
                             }
 
-                            format.url
+                            format.url ?: throw PlayableFormatNotFoundException()
                         } ?: throw PlayableFormatNotFoundException()
 
                         "UNPLAYABLE" -> throw UnplayableException()
@@ -1418,8 +1421,10 @@ class PlayerService : InvincibleService(),
                         )
                     }
 
-                    ringBuffer.append(videoId to url.toUri())
-                    dataSpec.withUri(url.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
+                    ringBuffer.append(Triple(videoId, url.toUri(), body?.mediaHeaders.orEmpty()))
+                    dataSpec.withUri(url.toUri())
+                        .withRequestHeaders(body?.mediaHeaders.orEmpty())
+                        .subrange(dataSpec.uriPositionOffset, chunkLength)
                 }
             }
         }

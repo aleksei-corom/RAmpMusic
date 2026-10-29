@@ -19,14 +19,16 @@ suspend fun Innertube.discoverPage() = runCatchingNonCancellable {
     }.body<BrowseResponse>()
 
     Innertube.DiscoverPage(
-        newReleaseAlbums = response.contents?.singleColumnBrowseResultsRenderer?.tabs
-            ?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.find {
+        newReleaseAlbums = response.contents
+            ?.sectionListContent()
+            ?.find {
                 it.musicCarouselShelfRenderer?.header?.musicCarouselShelfBasicHeaderRenderer
                     ?.moreContentButton?.buttonRenderer?.navigationEndpoint?.browseEndpoint?.browseId == "FEmusic_new_releases_albums"
             }?.musicCarouselShelfRenderer?.contents?.mapNotNull { it.musicTwoRowItemRenderer?.toNewReleaseAlbumPage() }
             .orEmpty(),
-        moods = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
-            ?.tabRenderer?.content?.sectionListRenderer?.contents?.find {
+        moods = response.contents
+            ?.sectionListContent()
+            ?.find {
                 it.musicCarouselShelfRenderer?.header?.musicCarouselShelfBasicHeaderRenderer
                     ?.moreContentButton?.buttonRenderer?.navigationEndpoint?.browseEndpoint?.browseId == "FEmusic_moods_and_genres"
             }?.musicCarouselShelfRenderer?.contents?.mapNotNull { it.musicNavigationButtonRenderer?.toMood() }
@@ -41,8 +43,9 @@ suspend fun Innertube.discoverPageNewAlbums() = runCatchingNonCancellable {
     }.body<BrowseResponse>()
 
     Innertube.DiscoverPageAlbums(
-        newReleaseAlbums = response.contents?.singleColumnBrowseResultsRenderer?.tabs
-            ?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.find {
+        newReleaseAlbums = response.contents
+            ?.sectionListContent()
+            ?.find {
                 it.musicCarouselShelfRenderer?.header?.musicCarouselShelfBasicHeaderRenderer
                     ?.moreContentButton?.buttonRenderer?.navigationEndpoint?.browseEndpoint?.browseId == "FEmusic_new_releases_albums"
             }?.musicCarouselShelfRenderer?.contents?.mapNotNull { it.musicTwoRowItemRenderer?.toNewReleaseAlbumPage() }

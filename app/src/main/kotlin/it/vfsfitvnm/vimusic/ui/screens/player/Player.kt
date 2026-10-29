@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,8 +58,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
@@ -188,6 +192,10 @@ fun Player(
         mutableStateOf(binder.player.shouldBePlaying)
     }
 
+    var isBuffering by remember {
+        mutableStateOf(binder.player.playbackState == Player.STATE_BUFFERING)
+    }
+
     val shouldBePlayingTransition = updateTransition(shouldBePlaying, label = "shouldBePlaying")
 
     val playPauseRoundness by shouldBePlayingTransition.animateDp(
@@ -219,6 +227,7 @@ fun Player(
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 shouldBePlaying = binder.player.shouldBePlaying
+                isBuffering = playbackState == Player.STATE_BUFFERING
             }
         }
     }
@@ -561,31 +570,40 @@ fun Player(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.Top,
                 modifier = Modifier
-                    .background(colorPalette.background1)
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(colorPalette.background2, colorPalette.background1)
+                        )
+                    )
                     .fillMaxSize()
                     .padding(horizontalBottomPaddingValues)
                     .drawBehind {
+                        val durationMs = positionAndDuration.second
+                        val progress = if (durationMs > 0) {
+                            (positionAndDuration.first.toFloat() / durationMs).coerceIn(0f, 1f)
+                        } else 0f
+
+                        val y = size.height - 3.dp.toPx()
+
                         drawLine(
-                            color = colorPalette.textDisabled,
-                            start = Offset(x = 0f, y = 1.dp.toPx()),
-                            end = Offset(x = size.maxDimension, y = 1.dp.toPx()),
+                            color = colorPalette.textDisabled.copy(alpha = 0.4f),
+                            start = Offset(x = 0f, y = y),
+                            end = Offset(x = size.width, y = y),
                             strokeWidth = 2.dp.toPx()
                         )
 
-                        val progress =
-                            positionAndDuration.first.toFloat() / positionAndDuration.second.absoluteValue
-
                         drawLine(
                             color = colorPalette.collapsedPlayerProgressBar,
-                            start = Offset(x = 0f, y = 1.dp.toPx()),
-                            end = Offset(x = size.width * progress, y = 1.dp.toPx()),
+                            start = Offset(x = 0f, y = y),
+                            end = Offset(x = size.width * progress, y = y),
                             strokeWidth = 2.dp.toPx()
                         )
 
                         drawCircle(
                             color = colorPalette.collapsedPlayerProgressBar,
                             radius = 3.dp.toPx(),
-                            center = Offset(x = size.width * progress, y = 1.dp.toPx())
+                            center = Offset(x = size.width * progress, y = y)
                         )
                     }
                     .pointerInput(Unit) {
@@ -642,7 +660,7 @@ fun Player(
                     /* minimized player */
                     BasicText(
                         text = mediaItem.mediaMetadata.title?.toString() ?: "",
-                        style = typography.xxs.semiBold,
+                        style = typography.xs.semiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -693,13 +711,13 @@ fun Player(
                                 }
                                 if (effectRotationEnabled) isRotated = !isRotated
                             }
-                            .background(colorPalette.background2)
+                            .background(colorPalette.accent)
                             .size(42.dp)
                     ) {
                         Image(
                             painter = painterResource(if (shouldBePlaying) R.drawable.pause else R.drawable.play),
                             contentDescription = null,
-                            colorFilter = ColorFilter.tint(colorPalette.iconButtonPlayer),
+                            colorFilter = ColorFilter.tint(colorPalette.onAccent),
                             modifier = Modifier
                                 .rotate(rotationAngle)
                                 .align(Alignment.Center)
@@ -753,7 +771,25 @@ fun Player(
         )
 
         val containerModifier = Modifier
-            .background(colorPalette.background1)
+            .background(
+                Brush.verticalGradient(
+                    0f to colorPalette.background1,
+                    0.55f to colorPalette.background1,
+                    1f to colorPalette.background0
+                )
+            )
+            .drawBehind {
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            colorPalette.accent.copy(alpha = 0.14f),
+                            Color.Transparent
+                        ),
+                        center = Offset(size.width / 2f, size.height * 0.18f),
+                        radius = size.width * 0.85f
+                    )
+                )
+            }
             .padding(
                 windowInsets
                     .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
@@ -919,6 +955,14 @@ fun Player(
                         modifier = Modifier
                             .padding(horizontal = 10.dp)
                     )
+
+                    if (isBuffering) {
+                        CircularProgressIndicator(
+                            color = colorPalette.accent,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
 
                 controlsContent(
@@ -1084,12 +1128,21 @@ fun Player(
                 ) {
                     thumbnailContent(
                         modifier = Modifier
-                            .clip(thumbnailShape)
                             .padding(
                                 horizontal = playerThumbnailSize.size.dp,
                                 vertical = 4.dp
                             )
+                            .shadow(24.dp, thumbnailShape)
+                            .clip(thumbnailShape)
                     )
+
+                    if (isBuffering) {
+                        CircularProgressIndicator(
+                            color = colorPalette.accent,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
 
                 Spacer(

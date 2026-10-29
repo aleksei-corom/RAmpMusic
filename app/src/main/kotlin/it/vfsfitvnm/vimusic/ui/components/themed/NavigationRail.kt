@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
@@ -129,8 +131,12 @@ inline fun NavigationRail(
                 val textColor by transition.animateColor(label = "") {
                     if (it == index) colorPalette.text else colorPalette.textDisabled
                 }
-                val dothAlpha by transition.animateFloat(label = "") {
-                    if (it == index) 1f else 0f
+                val iconColor by transition.animateColor(label = "") {
+                    if (it == index) colorPalette.accent else colorPalette.textDisabled
+                }
+                val containerColor by transition.animateColor(label = "") {
+                    if (it == index) colorPalette.accent.copy(alpha = if (colorPalette.isDark) 0.16f else 0.12f)
+                    else Color.Transparent
                 }
 
                 val textContent: @Composable () -> Unit = {
@@ -156,70 +162,24 @@ inline fun NavigationRail(
                 }
 
                 val iconContent: @Composable () -> Unit = {
-                    if (navigationBarType == NavigationBarType.IconOnly) {
-                        Image(
-                            painter = painterResource(icon),
-                            contentDescription = null,
-                            colorFilter = ColorFilter.tint(textColor),
-                            modifier = Modifier
-                                .padding(all = 12.dp)
-                                .size(24.dp)
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(icon),
-                            contentDescription = null,
-                            colorFilter = ColorFilter.tint(colorPalette.text),
-                            modifier = Modifier
-                                .vertical(enabled = !isLandscape)
-                                .graphicsLayer {
-                                    alpha = dothAlpha
-                                    translationX = (1f - dothAlpha) * -48.dp.toPx()
-                                    rotationZ = if (isLandscape) 0f else -90f
-                                }
-                                .size(Dimensions.navigationRailIconOffset * 2)
-                        )
-                    }
-                }
-
-                /*
-                val dothAlpha by transition.animateFloat(label = "") {
-                    if (it == index) 1f else 0f
-                }
-
-                val textColor by transition.animateColor(label = "") {
-                    if (it == index) colorPalette.text else colorPalette.textDisabled
-                }
-
-                val iconContent: @Composable () -> Unit = {
+                    val rotateInPortrait = navigationBarType == NavigationBarType.IconAndText && !isLandscape
                     Image(
                         painter = painterResource(icon),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(colorPalette.text),
+                        colorFilter = ColorFilter.tint(iconColor),
                         modifier = Modifier
-                            .vertical(enabled = !isLandscape)
+                            .then(if (rotateInPortrait) Modifier.vertical() else Modifier)
                             .graphicsLayer {
-                                alpha = dothAlpha
-                                //translationX = (1f - dothAlpha) * -48.dp.toPx()
-                                rotationZ = if (isLandscape) 0f else -90f
+                                rotationZ = if (rotateInPortrait) -90f else 0f
                             }
-                            .size(Dimensions.navigationRailIconOffset * 2)
+                            .padding(all = if (navigationBarType == NavigationBarType.IconOnly) 12.dp else 4.dp)
+                            .size(if (navigationBarType == NavigationBarType.IconOnly) 24.dp else 16.dp)
                     )
                 }
 
-                val textContent: @Composable () -> Unit = {
-                    BasicText(
-                        text = text,
-                        style = typography.xs.semiBold.center.color(textColor),
-                        modifier = Modifier
-                            .vertical(enabled = !isLandscape)
-                            .rotate(if (isLandscape) 0f else -90f)
-                            .padding(horizontal = 16.dp)
-                    )
-                }
-                */
                 val contentModifier = Modifier
                     .clip(RoundedCornerShape(24.dp))
+                    .background(containerColor)
                     .clickable(onClick = { onTabIndexChanged(index) })
 
                 if (isLandscape) {

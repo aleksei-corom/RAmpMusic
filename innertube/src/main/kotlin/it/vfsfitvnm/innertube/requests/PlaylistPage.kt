@@ -8,81 +8,133 @@ import it.vfsfitvnm.innertube.models.BrowseResponse
 import it.vfsfitvnm.innertube.models.ContinuationResponse
 import it.vfsfitvnm.innertube.models.MusicCarouselShelfRenderer
 import it.vfsfitvnm.innertube.models.MusicShelfRenderer
+import it.vfsfitvnm.innertube.models.Runs
+import it.vfsfitvnm.innertube.models.SectionListRenderer
 import it.vfsfitvnm.innertube.models.bodies.BrowseBody
 import it.vfsfitvnm.innertube.models.bodies.ContinuationBody
 import it.vfsfitvnm.innertube.utils.from
 import it.vfsfitvnm.innertube.utils.runCatchingNonCancellable
 
-suspend fun Innertube.playlistPage(body: BrowseBody) = runCatching {
+/**
+ * Página de un álbum o de una playlist de YouTube Music.
+ *
+ * YouTube cambió el layout: ahora la respuesta usa `twoColumnBrowseResultsRenderer`
+ * con la cabecera dentro de `tabs[0]` y las canciones en `secondaryContents`.
+ * El código anterior solo leía `singleColumnBrowseResultsRenderer`, por lo que
+ * la lista de canciones quedaba vacía.
+ *
+ * No se usa `X-Goog-FieldMask` aquí a propósito: al filtrar campos YouTube omite
+ * el contenido de `musicPlaylistShelfRenderer` y las columnas de duración.
+ */
+suspend fun Innertube.playlistPage(body: BrowseBody) = runCatchingNonCancellable {
     val response = client.post(browse) {
         setBody(body)
-        mask("contents.singleColumnBrowseResultsRenderer.tabs.tabRenderer.content.sectionListRenderer.contents(musicPlaylistShelfRenderer(continuations,contents.$musicResponsiveListItemRendererMask),musicCarouselShelfRenderer.contents.$musicTwoRowItemRendererMask),header.musicDetailHeaderRenderer(title,subtitle,thumbnail),microformat")
     }.body<BrowseResponse>()
 
-    val musicDetailHeaderRenderer = response
-        .header
-        ?.musicDetailHeaderRenderer
-
-    val sectionListRendererContents = response
-        .contents
+    val twoColumn = response.contents?.twoColumnBrowseResultsRenderer
+    val singleColumnSectionList = response.contents
         ?.singleColumnBrowseResultsRenderer
         ?.tabs
         ?.firstOrNull()
         ?.tabRenderer
         ?.content
         ?.sectionListRenderer
-        ?.contents
 
-    val musicShelfRenderer = sectionListRendererContents
+    val sections: List<SectionListRenderer.Content> = twoColumn
+        ?.secondaryContents
+        ?.sectionListRenderer
+        ?.contents
+        ?: singleColumnSectionList?.contents
+        ?: response.contents?.sectionListRenderer?.contents
+        ?: emptyList()
+
+    val responsiveHeader = twoColumn
+        ?.tabs
+        ?.firstNotNullOfOrNull { it.tabRenderer?.content?.sectionListRenderer }
+        ?.contents
+        ?.firstNotNullOfOrNull { it.musicResponsiveHeaderRenderer }
+
+    val detailHeader = response.header?.musicDetailHeaderRenderer
+    val microformat = response.microformat?.microformatDataRenderer
+
+    val subtitle: Runs? = responsiveHeader?.subtitle ?: detailHeader?.subtitle
+    val subtitleGroups = subtitle?.splitBySeparator()
+
+    val authors = responsiveHeader
+        ?.straplineTextOne
+        ?.splitBySeparator()
         ?.firstOrNull()
+        ?.mapNotNull { run -> run.text?.let { Innertube.Info(it, run.navigationEndpoint?.browseEndpoint) } }
+        ?.takeIf { it.isNotEmpty() }
+        ?: detailHeader
+            ?.subtitle
+            ?.splitBySeparator()
+            ?.getOrNull(1)
+            ?.mapNotNull { run -> run.text?.let { Innertube.Info(it, run.navigationEndpoint?.browseEndpoint) } }
+
+    val musicShelfRenderer = sections
+        .firstOrNull { it.musicShelfRenderer?.contents?.isNotEmpty() == true }
         ?.musicShelfRenderer
 
-    val musicCarouselShelfRenderer = sectionListRendererContents
-        ?.getOrNull(1)
+    val musicCarouselShelfRenderer = sections
+        .firstOrNull { it.musicCarouselShelfRenderer != null }
         ?.musicCarouselShelfRenderer
 
+    val songsPage = musicShelfRenderer?.toSongsPage(
+        fallbackContinuation = (
+            twoColumn?.secondaryContents?.sectionListRenderer?.continuations
+                ?: singleColumnSectionList?.continuations
+            )
+            ?.firstOrNull()
+            ?.nextContinuationData
+            ?.continuation
+    )
+
     Innertube.PlaylistOrAlbumPage(
-        title = musicDetailHeaderRenderer
-            ?.title
-            ?.text,
-        thumbnail = musicDetailHeaderRenderer
+        title = responsiveHeader?.title?.text
+            ?: detailHeader?.title?.text
+            ?: microformat?.title,
+        thumbnail = responsiveHeader
             ?.thumbnail
             ?.musicThumbnailRenderer
             ?.thumbnail
             ?.thumbnails
-            ?.firstOrNull(),
-        authors = musicDetailHeaderRenderer
-            ?.subtitle
-            ?.splitBySeparator()
-            ?.getOrNull(1)
-            ?.map(Innertube::Info),
-        year = musicDetailHeaderRenderer
-            ?.subtitle
-            ?.splitBySeparator()
+            ?.maxByOrNull { (it.width ?: 0) * (it.height ?: 0) }
+            ?: detailHeader
+                ?.thumbnail
+                ?.musicThumbnailRenderer
+                ?.thumbnail
+                ?.thumbnails
+                ?.maxByOrNull { (it.width ?: 0) * (it.height ?: 0) }
+            ?: microformat
+                ?.thumbnail
+                ?.thumbnails
+                ?.maxByOrNull { (it.width ?: 0) * (it.height ?: 0) }
+            ?: songsPage?.items?.firstOrNull()?.thumbnail,
+        authors = authors,
+        year = subtitleGroups
             ?.getOrNull(2)
             ?.firstOrNull()
-            ?.text,
-        url = response
-            .microformat
-            ?.microformatDataRenderer
-            ?.urlCanonical,
-        songsPage = musicShelfRenderer
-            ?.toSongsPage(),
+            ?.text
+            ?.takeIf(::looksLikeYear)
+            ?: subtitleGroups
+                ?.getOrNull(1)
+                ?.firstOrNull()
+                ?.text
+                ?.takeIf(::looksLikeYear),
+        url = microformat?.urlCanonical,
+        songsPage = songsPage,
         otherVersions = musicCarouselShelfRenderer
             ?.contents
             ?.mapNotNull(MusicCarouselShelfRenderer.Content::musicTwoRowItemRenderer)
             ?.mapNotNull(Innertube.AlbumItem::from)
     )
 }
-    /*.onFailure {
-    println("ERROR IN BROWSEBODY"+it.message)
-}
-     */
 
-suspend fun Innertube.playlistPage(body: ContinuationBody) = runCatching {
+suspend fun Innertube.playlistPage(body: ContinuationBody) = runCatchingNonCancellable {
     val response = client.post(browse) {
         setBody(body)
-        mask("continuationContents.musicPlaylistShelfContinuation(continuations,contents.$musicResponsiveListItemRendererMask)")
+        mask("continuationContents.musicPlaylistShelfContinuation(continuations,contents.$musicResponsiveListItemRendererMask),continuationContents.musicShelfContinuation(continuations,contents.$musicResponsiveListItemRendererMask)")
     }.body<ContinuationResponse>()
 
     response
@@ -90,13 +142,8 @@ suspend fun Innertube.playlistPage(body: ContinuationBody) = runCatching {
         ?.musicShelfContinuation
         ?.toSongsPage()
 }
-    /*
-    .onFailure {
-    println("ERROR IN CONTINUATION "+it.message)
-}
-     */
 
-private fun MusicShelfRenderer?.toSongsPage() =
+private fun MusicShelfRenderer?.toSongsPage(fallbackContinuation: String? = null) =
     Innertube.ItemsPage(
         items = this
             ?.contents
@@ -107,4 +154,8 @@ private fun MusicShelfRenderer?.toSongsPage() =
             ?.firstOrNull()
             ?.nextContinuationData
             ?.continuation
+            ?: fallbackContinuation
     )
+
+private fun looksLikeYear(text: String?): Boolean =
+    text?.matches(Regex("^(19|20)\\d{2}$")) == true

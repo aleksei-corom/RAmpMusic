@@ -21,3 +21,11 @@ dependencies {
 
     testImplementation(testLibs.junit)
 }
+
+tasks.withType<Test>().configureEach {
+    testLogging {
+        showStandardStreams = true
+        events("passed", "failed", "skipped")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}

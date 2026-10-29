@@ -83,11 +83,16 @@ fun AlbumScreen(browseId: String) {
     LaunchedEffect(Unit) {
         Database
             .album(browseId)
-            .combine(snapshotFlow { tabIndex }) { album, tabIndex -> album to tabIndex }
-            .collect { (currentAlbum, tabIndex) ->
+            .combine(Database.albumSongs(browseId)) { album, songs -> album to songs }
+            .combine(snapshotFlow { tabIndex }) { (album, songs), tabIndex ->
+                Triple(album, songs, tabIndex)
+            }
+            .collect { (currentAlbum, currentSongs, tabIndex) ->
                 album = currentAlbum
 
-                if (albumPage == null && (currentAlbum?.timestamp == null || tabIndex == 1)) {
+                // También se refresca si el álbum está cacheado pero sin canciones:
+                // las versiones anteriores guardaban el álbum con una lista vacía.
+                if (albumPage == null && (currentAlbum?.timestamp == null || tabIndex == 1 || currentSongs.isEmpty())) {
                     withContext(Dispatchers.IO) {
                         Innertube.albumPage(BrowseBody(browseId = browseId))
                             ?.onSuccess { currentAlbumPage ->

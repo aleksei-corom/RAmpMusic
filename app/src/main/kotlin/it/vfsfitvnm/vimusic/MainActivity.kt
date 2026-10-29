@@ -255,12 +255,17 @@ class MainActivity : AppCompatActivity(), PersistMapOwner {
                 }
             }
             if(getBoolean(isEnabledDiscoveryLangCodeKey,true))
-                LocalePreferences.preference = LocalePreferenceItem(Locale.getDefault().toLanguageTag(),"")
+                LocalePreferences.preference = LocalePreferenceItem(
+                    hl = Locale.getDefault().toLanguageTag(),
+                    gl = Locale.getDefault().country
+                )
         }
 
         setContent {
 
-            if (preferences.getEnum(checkUpdateStateKey, CheckUpdateState.Ask) == CheckUpdateState.Enabled) {
+            // RAmpMusic: comprobación de actualizaciones desactivada; apuntaba al repo
+            // upstream de RiMusic (archivado), que no corresponde a esta app.
+            if (false) {
                 val urlVersionCode =
                     "https://raw.githubusercontent.com/fast4x/RiMusic/master/updatedVersion/updatedVersionCode.ver"
                 //val urlVersionCode = "https://rimusic.xyz/update/updatedVersionCode.ver"
@@ -636,7 +641,7 @@ class MainActivity : AppCompatActivity(), PersistMapOwner {
         //intent.data = null
         //this.intent = null
 
-        Toast.makeText(this, "${"RiMusic "}${getString(R.string.opening_url)}", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "${"RAmpMusic "}${getString(R.string.opening_url)}", Toast.LENGTH_LONG).show()
 
         lifecycleScope.launch(Dispatchers.IO) {
             when (val path = uri.pathSegments.firstOrNull()) {

@@ -2,52 +2,23 @@ package it.vfsfitvnm.innertube.utils
 
 import it.vfsfitvnm.innertube.Innertube
 import it.vfsfitvnm.innertube.models.MusicShelfRenderer
-import it.vfsfitvnm.innertube.models.NavigationEndpoint
 
 fun Innertube.SongItem.Companion.from(content: MusicShelfRenderer.Content): Innertube.SongItem? {
-    val (mainRuns, otherRuns) = content.runs
-
-    // Possible configurations:
-    // "song" • author(s) • album • duration
-    // "song" • author(s) • duration
-    // author(s) • album • duration
-    // author(s) • duration
-
-    val album: Innertube.Info<NavigationEndpoint.Endpoint.Browse>? = otherRuns
-        .getOrNull(otherRuns.lastIndex - 1)
-        ?.firstOrNull()
-        ?.takeIf { run ->
-            run
-                .navigationEndpoint
-                ?.browseEndpoint
-                ?.type == "MUSIC_PAGE_TYPE_ALBUM"
-        }
-        ?.let(Innertube::Info)
-
-    return Innertube.SongItem(
-        info = mainRuns
-            .firstOrNull()
-            ?.let(Innertube::Info),
-        authors = otherRuns
-            .getOrNull(otherRuns.lastIndex - if (album == null) 1 else 2)
-            ?.map(Innertube::Info),
-        album = album,
-        durationText = otherRuns
-            .lastOrNull()
-            ?.firstOrNull()?.text,
-        thumbnail = content
-            .thumbnail
-    ).takeIf { it.info?.endpoint?.videoId != null }
+    // El parseo real vive en FromMusicResponsiveListItemRenderer: clasifica las
+    // columnas por tipo de endpoint en lugar de asumir una posición fija.
+    val renderer = content.musicResponsiveListItemRenderer ?: return null
+    return Innertube.SongItem.from(renderer)
 }
 
 fun Innertube.VideoItem.Companion.from(content: MusicShelfRenderer.Content): Innertube.VideoItem? {
     val (mainRuns, otherRuns) = content.runs
 
+    val titleRun = mainRuns.firstOrNull() ?: return null
+    val watchEndpoint = titleRun.navigationEndpoint?.watchEndpoint ?: return null
+
     return runCatching {
         Innertube.VideoItem(
-            info = mainRuns
-                .firstOrNull()
-                ?.let(Innertube::Info),
+            info = Innertube.Info(titleRun.text, watchEndpoint),
             authors = otherRuns
                 .getOrNull(otherRuns.lastIndex - 2)
                 ?.map(Innertube::Info),
@@ -61,7 +32,7 @@ fun Innertube.VideoItem.Companion.from(content: MusicShelfRenderer.Content): Inn
                 ?.text,
             thumbnail = content
                 .thumbnail
-        ).takeIf { it.info?.endpoint?.videoId != null }
+        )
     }.getOrNull()
 
 }
@@ -115,6 +86,11 @@ fun Innertube.ArtistItem.Companion.from(content: MusicShelfRenderer.Content): In
 
 fun Innertube.PlaylistItem.Companion.from(content: MusicShelfRenderer.Content): Innertube.PlaylistItem? {
     val (mainRuns, otherRuns) = content.runs
+    val allRuns = content.musicResponsiveListItemRenderer
+        ?.flexColumns
+        ?.mapNotNull { it.musicResponsiveListItemFlexColumnRenderer?.text?.runs }
+        ?.flatten()
+        .orEmpty()
 
     return Innertube.PlaylistItem(
         info = Innertube.Info(
@@ -126,18 +102,19 @@ fun Innertube.PlaylistItem.Companion.from(content: MusicShelfRenderer.Content): 
                 ?.navigationEndpoint
                 ?.browseEndpoint
         ),
-        channel = otherRuns
-            .firstOrNull()
-            ?.firstOrNull()
-            ?.let(Innertube::Info),
+        channel = allRuns
+            .firstOrNull { run ->
+                run.navigationEndpoint?.browseEndpoint?.type == "MUSIC_PAGE_TYPE_ARTIST"
+            }
+            ?.let { run -> Innertube.Info(run.text, run.navigationEndpoint?.browseEndpoint) },
         songCount = otherRuns
             .lastOrNull()
             ?.firstOrNull()
             ?.text
-            ?.split(' ')
-            ?.firstOrNull()
+            ?.takeIf { it.trim().all(Char::isDigit) }
             ?.toIntOrNull(),
         thumbnail = content
             .thumbnail
     ).takeIf { it.info?.endpoint?.browseId != null }
 }
+

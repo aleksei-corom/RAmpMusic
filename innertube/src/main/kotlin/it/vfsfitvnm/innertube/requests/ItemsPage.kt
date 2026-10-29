@@ -10,6 +10,7 @@ import it.vfsfitvnm.innertube.models.GridRenderer
 import it.vfsfitvnm.innertube.models.MusicResponsiveListItemRenderer
 import it.vfsfitvnm.innertube.models.MusicShelfRenderer
 import it.vfsfitvnm.innertube.models.MusicTwoRowItemRenderer
+import it.vfsfitvnm.innertube.models.SectionListRenderer
 import it.vfsfitvnm.innertube.models.bodies.BrowseBody
 import it.vfsfitvnm.innertube.models.bodies.ContinuationBody
 import it.vfsfitvnm.innertube.utils.runCatchingNonCancellable
@@ -21,18 +22,11 @@ suspend fun <T : Innertube.Item> Innertube.itemsPage(
 ) = runCatchingNonCancellable {
     val response = client.post(browse) {
         setBody(body)
-//        mask("contents.singleColumnBrowseResultsRenderer.tabs.tabRenderer.content.sectionListRenderer.contents(musicPlaylistShelfRenderer(continuations,contents.$musicResponsiveListItemRendererMask),gridRenderer(continuations,items.$musicTwoRowItemRendererMask))")
     }.body<BrowseResponse>()
 
     val sectionListRendererContent = response
         .contents
-        ?.singleColumnBrowseResultsRenderer
-        ?.tabs
-        ?.firstOrNull()
-        ?.tabRenderer
-        ?.content
-        ?.sectionListRenderer
-        ?.contents
+        ?.sectionListContent()
         ?.firstOrNull()
 
     itemsPageFromMusicShelRendererOrGridRenderer(
@@ -52,7 +46,6 @@ suspend fun <T : Innertube.Item> Innertube.itemsPage(
 ) = runCatchingNonCancellable {
     val response = client.post(browse) {
         setBody(body)
-//        mask("contents.singleColumnBrowseResultsRenderer.tabs.tabRenderer.content.sectionListRenderer.contents(musicPlaylistShelfRenderer(continuations,contents.$musicResponsiveListItemRendererMask),gridRenderer(continuations,items.$musicTwoRowItemRendererMask))")
     }.body<ContinuationResponse>()
 
     itemsPageFromMusicShelRendererOrGridRenderer(
@@ -64,6 +57,25 @@ suspend fun <T : Innertube.Item> Innertube.itemsPage(
         fromMusicTwoRowItemRenderer = fromMusicTwoRowItemRenderer,
     )
 }
+
+/**
+ * Devuelve las secciones de la página soportando los dos layouts de YouTube Music:
+ * `singleColumnBrowseResultsRenderer` (el clásico) y
+ * `twoColumnBrowseResultsRenderer` (el que usan hoy álbumes y playlists).
+ */
+internal fun BrowseResponse.Contents.sectionListContent(): List<SectionListRenderer.Content>? =
+    twoColumnBrowseResultsRenderer
+        ?.secondaryContents
+        ?.sectionListRenderer
+        ?.contents
+        ?: singleColumnBrowseResultsRenderer
+            ?.tabs
+            ?.firstOrNull()
+            ?.tabRenderer
+            ?.content
+            ?.sectionListRenderer
+            ?.contents
+        ?: sectionListRenderer?.contents
 
 private fun <T : Innertube.Item> itemsPageFromMusicShelRendererOrGridRenderer(
     musicShelfRenderer: MusicShelfRenderer?,

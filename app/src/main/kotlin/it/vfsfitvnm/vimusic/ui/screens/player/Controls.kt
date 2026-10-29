@@ -490,7 +490,7 @@ fun Controls(
                         scrubbingPosition?.let(binder.player::seekTo)
                         scrubbingPosition = null
                     },
-                    color = colorPalette.collapsedPlayerProgressBar,
+                    color = colorPalette.accent,
                     backgroundColor = colorPalette.textSecondary,
                     shape = RoundedCornerShape(8.dp)
                 )
@@ -514,7 +514,7 @@ fun Controls(
                         scrubbingPosition?.let(binder.player::seekTo)
                         scrubbingPosition = null
                     },
-                    color = colorPalette.collapsedPlayerProgressBar,
+                    color = colorPalette.accent,
                     backgroundColor = colorPalette.textSecondary,
                     shape = RoundedCornerShape(8.dp),
                 )
@@ -564,7 +564,7 @@ fun Controls(
                     }
                      */
                     },
-                    color = colorPalette.collapsedPlayerProgressBar,
+                    color = colorPalette.accent,
                     isActive = binder.player.isPlaying,
                     backgroundColor = colorPalette.textSecondary,
                     shape = RoundedCornerShape(8.dp)
@@ -750,18 +750,9 @@ fun Controls(
                     }
                     //.background(if (uiType != UiType.RiMusic) colorPalette.background3 else colorPalette.background0)
                     .background(
-                        when (colorPaletteName) {
-                            ColorPaletteName.Dynamic, ColorPaletteName.Default ->
-                                if (playerPlayButtonType == PlayerPlayButtonType.CircularRibbed)
-                                    colorPalette.background1 else
-                                    if (playerPlayButtonType != PlayerPlayButtonType.Disabled)
-                                        colorPalette.background2 else colorPalette.background1
-
-                            ColorPaletteName.PureBlack, ColorPaletteName.ModernBlack ->
-                                if (playerPlayButtonType == PlayerPlayButtonType.CircularRibbed)
-                                    colorPalette.background1 else
-                                    if (playerPlayButtonType != PlayerPlayButtonType.Disabled)
-                                        colorPalette.background4 else colorPalette.background0
+                        when (playerPlayButtonType) {
+                            PlayerPlayButtonType.Disabled -> colorPalette.background1
+                            else -> colorPalette.accent
                         }
                     )
                     .width(if (uiType != UiType.RiMusic) PlayerPlayButtonType.Default.width.dp else playerPlayButtonType.width.dp)
@@ -771,12 +762,7 @@ fun Controls(
                 if (playerPlayButtonType == PlayerPlayButtonType.CircularRibbed)
                 Image(
                     painter = painterResource(R.drawable.a13shape),
-                    colorFilter = ColorFilter.tint(
-                        when (colorPaletteName) {
-                            ColorPaletteName.PureBlack, ColorPaletteName.ModernBlack -> colorPalette.background4
-                            else -> colorPalette.background2
-                        }
-                    ),
+                    colorFilter = ColorFilter.tint(colorPalette.onAccent),
                     modifier = Modifier
                         .fillMaxSize()
                         .rotate(rotationAngle),
@@ -787,7 +773,7 @@ fun Controls(
                 Image(
                     painter = painterResource(if (shouldBePlaying) R.drawable.pause else R.drawable.play),
                     contentDescription = null,
-                    colorFilter = ColorFilter.tint(colorPalette.collapsedPlayerProgressBar), //if (playerPlayButtonType == PlayerPlayButtonType.CircularRibbed) ColorFilter.tint(colorPalette.iconButtonPlayer) else ColorFilter.tint(colorPalette.text),
+                    colorFilter = ColorFilter.tint(colorPalette.onAccent), //if (playerPlayButtonType == PlayerPlayButtonType.CircularRibbed) ColorFilter.tint(colorPalette.iconButtonPlayer) else ColorFilter.tint(colorPalette.text),
                     modifier = Modifier
                         .rotate(rotationAngle)
                         .align(Alignment.Center)

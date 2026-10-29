@@ -18,10 +18,12 @@ suspend fun Innertube.browse(body: BrowseBodyWithLocale) = runCatchingNonCancell
     }.body<BrowseResponse>()
 
     BrowseResult(
-        title = response.header?.musicImmersiveHeaderRenderer?.title?.text ?: response.header
-            ?.musicDetailHeaderRenderer?.title?.text,
-        items = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
-            ?.tabRenderer?.content?.sectionListRenderer?.contents?.mapNotNull { content ->
+        title = response.header?.musicImmersiveHeaderRenderer?.title?.text
+            ?: response.header?.musicDetailHeaderRenderer?.title?.text
+            ?: response.microformat?.microformatDataRenderer?.title,
+        items = response.contents
+            ?.sectionListContent()
+            ?.mapNotNull { content ->
                 when {
                     content.gridRenderer != null -> BrowseResult.Item(
                         title = content.gridRenderer.header?.gridHeaderRenderer?.title?.runs

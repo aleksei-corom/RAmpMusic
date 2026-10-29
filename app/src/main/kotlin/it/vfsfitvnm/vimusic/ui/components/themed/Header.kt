@@ -55,7 +55,7 @@ fun Header(
         titleContent = {
             BasicText(
                 text = title,
-                style = typography.xxl.medium,
+                style = typography.xxl.semiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -179,8 +179,8 @@ fun HeaderWithIcon (
         BasicText(
             text = title,
             style = TextStyle(
-                fontSize = typography.xxl.bold.fontSize,
-                fontWeight = typography.xxl.bold.fontWeight,
+                fontSize = typography.xxl.semiBold.fontSize,
+                fontWeight = typography.xxl.semiBold.fontWeight,
                 color = colorPalette.text,
                 textAlign = if(uiType != UiType.ViMusic) TextAlign.Center else TextAlign.End
 
@@ -216,7 +216,7 @@ fun HalfHeader(
         titleContent = {
             BasicText(
                 text = title,
-                style = typography.xxl.medium,
+                style = typography.xxl.semiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

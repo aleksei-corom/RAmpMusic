@@ -8,12 +8,35 @@ import kotlinx.serialization.json.JsonNames
 data class BrowseResponse(
     val contents: Contents?,
     val header: Header?,
-    val microformat: Microformat?
+    val microformat: Microformat?,
+    val responseContext: ResponseContext? = null,
 ) {
+    @Serializable
+    data class ResponseContext(
+        val visitorData: String? = null,
+    )
+
     @Serializable
     data class Contents(
         val singleColumnBrowseResultsRenderer: Tabs?,
+        val twoColumnBrowseResultsRenderer: TwoColumnBrowseResultsRenderer? = null,
         val sectionListRenderer: SectionListRenderer?,
+    )
+
+    /**
+     * Layout que YouTube Music usa desde hace un tiempo para álbumes y playlists:
+     * la cabecera va en `tabs[0].tabRenderer.content.sectionListRenderer` y la
+     * lista de canciones en `secondaryContents.sectionListRenderer`.
+     */
+    @Serializable
+    data class TwoColumnBrowseResultsRenderer(
+        val secondaryContents: SecondaryContents? = null,
+        val tabs: List<Tabs.Tab>? = null,
+    )
+
+    @Serializable
+    data class SecondaryContents(
+        val sectionListRenderer: SectionListRenderer? = null,
     )
 
     @Serializable
@@ -25,6 +48,7 @@ data class BrowseResponse(
         @Serializable
         data class MusicDetailHeaderRenderer(
             val title: Runs?,
+            val description: Runs? = null,
             val subtitle: Runs?,
             val secondSubtitle: Runs?,
             val thumbnail: ThumbnailRenderer?,
@@ -59,7 +83,15 @@ data class BrowseResponse(
     ) {
         @Serializable
         data class MicroformatDataRenderer(
-            val urlCanonical: String?
+            val urlCanonical: String? = null,
+            val title: String? = null,
+            val description: String? = null,
+            val thumbnail: MicroformatThumbnail? = null,
+        )
+
+        @Serializable
+        data class MicroformatThumbnail(
+            val thumbnails: List<Thumbnail>? = null,
         )
     }
 }

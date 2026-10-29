@@ -438,7 +438,7 @@ fun  UiSettings() {
             },
             valueText = {
                 when(it) {
-                    UiType.RiMusic -> UiType.RiMusic.name
+                    UiType.RiMusic -> "RAmpMusic"
                     UiType.ViMusic -> UiType.ViMusic.name
                 }
             }
